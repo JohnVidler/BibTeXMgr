@@ -1,20 +1,12 @@
 package uk.co.johnvidler.BibTeXMgr.panels;
 
-import uk.co.johnvidler.BibTeXMgr.ui.MainWindow;
 import uk.co.johnvidler.bibtex.BibTeXEntry;
-import uk.co.johnvidler.bibtex.BibTeXFile;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.text.TableView;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.util.Collections;
-import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 public class ListTaskPanel extends AbstractTaskPanel
@@ -104,6 +96,12 @@ public class ListTaskPanel extends AbstractTaskPanel
     {
         public void actionPerformed(ActionEvent actionEvent)
         {
+            if( dataSource == null )
+            {
+                rootWin.showDialog("Error!", "No file open to edit!", true);
+                return;
+            }
+
             dataSource.put("",new BibTeXEntry("",""));
             table.updateUI();
         }
@@ -122,15 +120,8 @@ public class ListTaskPanel extends AbstractTaskPanel
 
         JToolBar toolbar = new JToolBar();
         toolbar.add( newEntryBtn );
-        newEntryBtn.addActionListener( newEntryAction );
+        newEntryBtn.addActionListener(newEntryAction);
         add(toolbar, BorderLayout.NORTH);
-    }
-
-    public void setData( TreeMap<String, BibTeXEntry> data )
-    {
-        dataSource = data;
-        table.setModel( dataModel );
-        repaint();
     }
 
     @Override
@@ -141,81 +132,11 @@ public class ListTaskPanel extends AbstractTaskPanel
     }
 
     @Override
-    public void openBtnEvent( MainWindow win )
+    public void setDataSource(TreeMap<String, BibTeXEntry> dataSource)
     {
-        BibTeXFile bibFile = new BibTeXFile();
-        try
-        {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setMultiSelectionEnabled(false);
-            fileChooser.setFileFilter( new FileFilter() {
-                @Override
-                public boolean accept(File file) {
-                    return file.isDirectory() || file.getAbsolutePath().endsWith(".bib");
-                }
-
-                @Override
-                public String getDescription() {
-                    return "BibTex files";
-                }
-            } );
-
-            int action = fileChooser.showOpenDialog(this);
-            if( action == JFileChooser.APPROVE_OPTION )
-            {
-                File file = fileChooser.getSelectedFile();
-                TreeMap<String, BibTeXEntry> entries = bibFile.read( file );
-                setData( entries );
-            }
-        }
-        catch( Throwable t )
-        {
-            JDialog alert = new JDialog(win);
-            alert.setTitle("Error!");
-            alert.add( new JLabel( t.getLocalizedMessage() ) );
-            alert.setSize( new Dimension(320, 120) );
-            alert.setVisible(true);
-        }
+        this.dataSource = dataSource;
+        table.setModel(dataModel);
+        dataModel.fireTableDataChanged();
+        repaint();
     }
-
-    @Override
-    public void saveBtnEvent( MainWindow win )
-    {
-        BibTeXFile bibFile = new BibTeXFile();
-        try
-        {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setMultiSelectionEnabled(false);
-            fileChooser.setFileFilter( new FileFilter() {
-                @Override
-                public boolean accept(File file) {
-                    return file.isDirectory() || file.getAbsolutePath().endsWith(".bib");
-                }
-
-                @Override
-                public String getDescription() {
-                    return "BibTex files";
-                }
-            } );
-
-            int action = fileChooser.showSaveDialog( this );
-            if( action == JFileChooser.APPROVE_OPTION )
-            {
-                File file = fileChooser.getSelectedFile();
-
-                bibFile.write( file, dataSource );
-
-            }
-
-        }
-        catch( Throwable t )
-        {
-            JDialog alert = new JDialog(win);
-            alert.setTitle("Error!");
-            alert.add( new JLabel( t.getLocalizedMessage() ) );
-            alert.setSize( new Dimension(320, 120) );
-            alert.setVisible(true);
-        }
-    }
-
 }

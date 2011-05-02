@@ -1,50 +1,129 @@
 package uk.co.johnvidler.BibTeXMgr.ui;
 
 import uk.co.johnvidler.BibTeXMgr.panels.AbstractTaskPanel;
+import uk.co.johnvidler.bibtex.BibTeXEntry;
+import uk.co.johnvidler.bibtex.BibTeXFile;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.io.File;
+import java.util.TreeMap;
 import java.util.concurrent.Semaphore;
 
-/**
- * Created by IntelliJ IDEA.
- * User: john
- * Date: 30/03/11
- * Time: 16:56
- * To change this template use File | Settings | File Templates.
- */
-public class MainWindow extends JFrame
+public class MainWindow extends JFrame implements KeyListener
 {
-    private MainWindow self = null;
+    private static MainWindow self = null;
+    
     private Semaphore eventLock = new Semaphore(1);
     private JToolBar toolBar = new JToolBar("Menu");
 
     private AbstractTaskPanel currentTaskPanel = null;
 
-    private JButton openBtn = new JButton("Open");
-    private JButton saveBtn = new JButton("Save");
-    private JButton saveAsBtn = new JButton("Save As");
+    // The current BibTex file
+    private TreeMap<String, BibTeXEntry> dataSource = null;
 
-    private ActionListener buttonListener = new ActionListener()
+    private JButton newBtn = new JButton("New");
+    private ActionListener newBtnEvent = new ActionListener()
     {
-        public void actionPerformed( ActionEvent actionEvent )
+        public void actionPerformed(ActionEvent actionEvent)
         {
-            if( eventLock.tryAcquire() )
-            {
-                if( currentTaskPanel != null )
-                {
-                    Object source = actionEvent.getSource();
+            dataSource = new TreeMap<String, BibTeXEntry>();
+            dataSource.put( "new", new BibTeXEntry( "Article", "new" ) );
 
-                    if( source == openBtn )
-                        currentTaskPanel.openBtnEvent( self );
-                    else if( source == saveBtn )
-                        currentTaskPanel.saveBtnEvent( self );
-                    else if( source == saveAsBtn )
-                        currentTaskPanel.saveAsBtnEvent( self );
+            if( currentTaskPanel != null )
+                currentTaskPanel.setDataSource( dataSource );
+        }
+    };
+
+    private JButton openBtn = new JButton("Open");
+    private ActionListener openBtnEvent = new ActionListener()
+    {
+        public void actionPerformed(ActionEvent actionEvent)
+        {
+            BibTeXFile bibFile = new BibTeXFile();
+            try
+            {
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setMultiSelectionEnabled(false);
+                fileChooser.setFileFilter( new FileFilter() {
+                    @Override
+                    public boolean accept(File file) {
+                        return file.isDirectory() || file.getAbsolutePath().endsWith(".bib");
+                    }
+
+                    @Override
+                    public String getDescription() {
+                        return "BibTex files";
+                    }
+                } );
+
+                int action = fileChooser.showOpenDialog(self);
+                if( action == JFileChooser.APPROVE_OPTION )
+                {
+                    File file = fileChooser.getSelectedFile();
+                    dataSource = bibFile.read( file );
+
+                    if( currentTaskPanel != null )
+                        currentTaskPanel.setDataSource( dataSource );
                 }
-                eventLock.release();
+            }
+            catch( Throwable t )
+            {
+                JDialog alert = new JDialog( self, "Error!", true );
+                alert.setTitle("Error!");
+                alert.add(new JLabel(t.getLocalizedMessage()));
+                alert.pack();
+                alert.setVisible(true);
+            }
+        }
+    };
+
+    private JButton saveBtn = new JButton("Save");
+    
+
+    private JButton saveAsBtn = new JButton("Save As");
+    private ActionListener saveAsEvent = new ActionListener()
+    {
+        public void actionPerformed(ActionEvent actionEvent)
+        {
+            BibTeXFile bibFile = new BibTeXFile();
+            try
+            {
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setMultiSelectionEnabled(false);
+                fileChooser.setFileFilter( new FileFilter() {
+                    @Override
+                    public boolean accept(File file) {
+                        return file.isDirectory() || file.getAbsolutePath().endsWith(".bib");
+                    }
+
+                    @Override
+                    public String getDescription() {
+                        return "BibTex files";
+                    }
+                } );
+
+                int action = fileChooser.showSaveDialog( self );
+                if( action == JFileChooser.APPROVE_OPTION )
+                {
+                    File file = fileChooser.getSelectedFile();
+
+                    bibFile.write( file, dataSource );
+
+                }
+
+            }
+            catch( Throwable t )
+            {
+                JDialog alert = new JDialog( self, "Error!", true );
+                alert.add( new JLabel( t.getLocalizedMessage() ) );
+                alert.pack();
+                alert.setVisible(true);
             }
         }
     };
@@ -53,15 +132,20 @@ public class MainWindow extends JFrame
     {
         super("BibTeXMgr");
         setDefaultCloseOperation( EXIT_ON_CLOSE );
-        setPreferredSize( new Dimension( 640, 480 ) );
+        setPreferredSize( new Dimension( 800, 600 ) );
         self = this;
 
         // Events
-        openBtn.addActionListener( buttonListener );
-        saveBtn.addActionListener( buttonListener );
-        saveAsBtn.addActionListener( buttonListener );
+        newBtn.addActionListener( newBtnEvent );
+        openBtn.addActionListener( openBtnEvent );
+        //saveBtn.addActionListener( saveAsEvent );
+        saveAsBtn.addActionListener( saveAsEvent );
+
+        // Listen for key events - hand them over to inner views!
+        this.addKeyListener( this );
 
         // Toolbar
+        toolBar.add( newBtn );
         toolBar.add( openBtn );
         toolBar.add( saveBtn );
         toolBar.add( saveAsBtn );
@@ -74,6 +158,13 @@ public class MainWindow extends JFrame
         setVisible( true );
     }
 
+    /**
+     * Provides a reference to the application root window, mainly for application-wide modal dialogs.
+     *
+     * @return A reference to the current application window.
+     */
+    public static MainWindow getRootWindow() { return self; }
+
 
     public void setCurrentTaskPanel( AbstractTaskPanel panel )
     {
@@ -84,6 +175,7 @@ public class MainWindow extends JFrame
             if( currentTaskPanel != null )
                 remove( currentTaskPanel );
             add( panel, BorderLayout.CENTER );
+            panel.setDataSource( dataSource );
             currentTaskPanel = panel;
 
             eventLock.release();
@@ -92,5 +184,51 @@ public class MainWindow extends JFrame
         {
             err.printStackTrace();
         }
+    }
+
+    public void showDialog( String title, String message, boolean modal )
+    {
+        final JDialog alert = new JDialog( self, title, modal );
+        alert.setMinimumSize( new Dimension(320, 120) );
+
+        JLabel label = new JLabel( message );
+        label.setBorder( BorderFactory.createEmptyBorder(10,10,10,10) );
+
+        JButton okBtn = new JButton("Ok");
+        okBtn.setBorder( BorderFactory.createEmptyBorder(10,10,10,10) );
+        okBtn.addActionListener( new ActionListener() {
+            public void actionPerformed(ActionEvent actionEvent) {
+                alert.setVisible(false);
+            }
+        } );
+
+        alert.setLayout( new BorderLayout() );
+        alert.add( label, BorderLayout.CENTER );
+        alert.add( okBtn, BorderLayout.SOUTH );
+        
+        alert.setModalityType(Dialog.ModalityType.DOCUMENT_MODAL);
+        alert.setAlwaysOnTop(true);
+        alert.pack();
+        alert.setVisible(true);
+        alert.setResizable(false);
+        alert.transferFocus();
+    }
+
+    public void keyTyped(KeyEvent keyEvent)
+    {
+        if( currentTaskPanel != null )
+            currentTaskPanel.keyTyped( keyEvent );
+    }
+
+    public void keyPressed(KeyEvent keyEvent)
+    {
+        if( currentTaskPanel != null )
+            currentTaskPanel.keyPressed(keyEvent);
+    }
+
+    public void keyReleased(KeyEvent keyEvent)
+    {
+        if( currentTaskPanel != null )
+            currentTaskPanel.keyReleased(keyEvent);
     }
 }
