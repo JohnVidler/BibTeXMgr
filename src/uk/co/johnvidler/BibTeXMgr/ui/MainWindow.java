@@ -1,6 +1,7 @@
 package uk.co.johnvidler.BibTeXMgr.ui;
 
 import uk.co.johnvidler.BibTeXMgr.panels.AbstractTaskPanel;
+import uk.co.johnvidler.BibTeXMgr.panels.ListTaskPanel;
 import uk.co.johnvidler.bibtex.BibTeXEntry;
 import uk.co.johnvidler.bibtex.BibTeXFile;
 
@@ -12,7 +13,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.io.File;
-import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Semaphore;
 
 public class MainWindow extends JFrame implements KeyListener
@@ -25,15 +26,15 @@ public class MainWindow extends JFrame implements KeyListener
     private AbstractTaskPanel currentTaskPanel = null;
 
     // The current BibTex file
-    private TreeMap<String, BibTeXEntry> dataSource = null;
+    private TreeSet<BibTeXEntry> dataSource = null;
 
     private JButton newBtn = new JButton("New");
     private ActionListener newBtnEvent = new ActionListener()
     {
         public void actionPerformed(ActionEvent actionEvent)
         {
-            dataSource = new TreeMap<String, BibTeXEntry>();
-            dataSource.put( "new", new BibTeXEntry( "Article", "new" ) );
+            dataSource = new TreeSet<BibTeXEntry>();
+            dataSource.add(new BibTeXEntry("Article", "new"));
 
             if( currentTaskPanel != null )
                 currentTaskPanel.setDataSource( dataSource );
@@ -70,6 +71,11 @@ public class MainWindow extends JFrame implements KeyListener
 
                     if( currentTaskPanel != null )
                         currentTaskPanel.setDataSource( dataSource );
+
+                    if( currentTaskPanel instanceof ListTaskPanel )
+                    {
+                        ListTaskPanel panel = (ListTaskPanel)currentTaskPanel;
+                    }
                 }
             }
             catch( Throwable t )

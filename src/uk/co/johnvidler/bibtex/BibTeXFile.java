@@ -1,102 +1,99 @@
 package uk.co.johnvidler.bibtex;
 
 import java.io.*;
-import java.util.*;
+import java.nio.BufferOverflowException;
+import java.util.ArrayList;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.DataFormatException;
 
 public class BibTeXFile
 {
-    private static final Pattern property = Pattern.compile( "^\\s*([a-zA-Z]+)\\s*=\\s*(?:\\\"|\\{)([^\\\"]+)(?:\\\"|\\}),?" );
-    private static final Pattern entryHeader = Pattern.compile( "^@([a-zA-Z0-9_\\-]+)\\{([a-zA-Z0-9\\-_\\.]+)," );
-    private static final Pattern entryFooter = Pattern.compile( "\\}" );
+    /*private static final Pattern property = Pattern.compile( "^\\s*([a-zA-Z_\\-]+)\\s*=\\s*(?:\\\"|\\{)([^\\\"]+)(?:\\\"|\\}),?" );
+    private static final Pattern entryHeader = Pattern.compile( "^@([a-zA-Z0-9_\\-]+)\\{([a-zA-Z0-9:\\-_\\.]+)," );
+    private static final Pattern entryFooter = Pattern.compile( "\\},?" );*/
+
+    private static final Pattern separator = Pattern.compile( "(,)" );
+    private static final Pattern openEntry = Pattern.compile( "^\\s*@([a-zA-Z_\\-]+)\\s*\\{\\s*([a-zA-Z0-9_\\-:]+),$" );
+    private static final Pattern closeEntry = Pattern.compile( "^(\\s*\\},)" );
+    private static final Pattern property = Pattern.compile( "^\\s*([a-zA-Z0-9:_\\-]+)\\s*=\\s*" );
+
+    private static final Pattern comment = Pattern.compile( "^(%+)" );
+
+
+    private ArrayList<String> fields = new ArrayList<String>();
+    private String buffer = "";
 
     public BibTeXFile()
     {
         //Stub, init
     }
 
-    public void write( File file, Map<String, BibTeXEntry> entries ) throws Throwable
+    public ArrayList<String> getFields() { return fields; }
+
+    public void write( File file, TreeSet<BibTeXEntry> entries ) throws Throwable
     {
         BufferedWriter outputStream = new BufferedWriter( new FileWriter(file) );
 
-        for( String key : entries.keySet() )
-        {
-            outputStream.write( entries.get(key).toString() );
-        }
+        for( BibTeXEntry e : entries )
+            outputStream.write( e.toString() );
 
         outputStream.flush();
         outputStream.close();
     }
 
 
-    public void writeXML( File file, Map<String, BibTeXEntry> entries ) throws Throwable
+    public void writeXML( File file, TreeSet<BibTeXEntry> entries ) throws Throwable
     {
         BufferedWriter outputStream = new BufferedWriter( new FileWriter(file) );
 
-        for( String key : entries.keySet() )
-        {
-            outputStream.write( entries.get(key).toXML() );
-        }
+        for( BibTeXEntry e : entries  )
+            outputStream.write( e.toXML() );
 
         outputStream.flush();
         outputStream.close();
     }
 
-    public TreeMap<String, BibTeXEntry> read( File file ) throws Throwable
+    public TreeSet<BibTeXEntry> read(File file) throws Throwable
     {
-        TreeMap<String, BibTeXEntry> entries = new TreeMap<String, BibTeXEntry>();
+        TreeSet<BibTeXEntry> entries = new TreeSet<BibTeXEntry>();
 
         try
         {
             BufferedReader inputStream = new BufferedReader( new FileReader( file ) );
 
-            String buffer = inputStream.readLine();
-            while( buffer != null )
+            int input = 0;
+            buffer = "";
+            while( input != -1 )
             {
-                buffer = buffer.trim();
+                input = inputStream.read();
+                buffer += (char)input;
 
-                // Skip newlines
-                if( !buffer.equals("") )
+                if( comment.matcher(buffer.trim()).find() )
                 {
-                    // Is it a new entry?
-                    if( entryHeader.matcher(buffer).matches() )
-                    {
-                        Matcher m = entryHeader.matcher(buffer);
-                        m.find();
+                    Matcher m = comment.matcher(buffer);
+                    m.find();
 
-                        BibTeXEntry newEntry = readEntry( m.group(1), m.group(2), inputStream );
-
-                        if( newEntry != null )
-                            entries.put( newEntry.getKey(), newEntry );
-                    }
-                    else
-                    {
-                        // Try again, attaching another line to this one in case the ID is on the next line
-                        buffer += inputStream.readLine().trim();
-
-                        if( entryHeader.matcher(buffer).matches() )
-                        {
-                            Matcher m = entryHeader.matcher(buffer);
-                            m.find();
-
-                            BibTeXEntry newEntry = readEntry( m.group(1), m.group(2), inputStream );
-
-                            if( newEntry != null )
-                                entries.put( newEntry.getKey(), newEntry );
-                            else
-                                System.out.println("Internal error!");
-                        }
-                        else
-                        {
-                            throw new DataFormatException( "Expected a new entry, but got something else! '" +buffer+ "'" );
-                        }
-                    }
+                    // Pop from the start of the buffer...
+                    buffer = "";
+                    System.out.println( "Skipped: " + inputStream.readLine() );
                 }
 
-                buffer = inputStream.readLine();
+                if( openEntry.matcher( buffer ).find() )
+                {
+                    BibTeXEntry newEntry = readBibTeXEntry( inputStream );
+                    if( newEntry != null )
+                        entries.add( newEntry );
+                }
+
+                if( buffer.length() > 1024 )
+                {
+                    System.err.println( "Input: " + buffer );
+                    throw new BufferOverflowException();
+                }
             }
+
+            System.out.println( "OK!" );
 
             return entries;
         }
@@ -107,40 +104,96 @@ public class BibTeXFile
         }
     }
 
-    private BibTeXEntry readEntry( String type, String key, BufferedReader inputStream ) throws Throwable
+    public BibTeXEntry readBibTeXEntry( BufferedReader inputStream ) throws Throwable
     {
-        BibTeXEntry newEntry = new BibTeXEntry( type, key );
+        Matcher titleMatcher = openEntry.matcher(buffer);
+        titleMatcher.find();
 
-        String buffer = inputStream.readLine();
-        while( buffer != null )
+        BibTeXEntry entry = new BibTeXEntry( titleMatcher.group(1), titleMatcher.group(2) );
+
+        // Pop from the start of the buffer...
+        buffer = buffer.substring( titleMatcher.group(0).length() );
+
+        int input = inputStream.read();
+        while( input != -1 )
         {
-            // Skip newlines
-            if( !buffer.equals("") )
+            buffer += (char)input;
+
+            if( property.matcher(buffer).find() )
             {
-                // Is is a property line?
-                if( property.matcher(buffer).matches() )
-                {
-                    Matcher m = property.matcher(buffer);
-                    m.find();
+                Matcher prop = property.matcher(buffer);
+                prop.find();
 
-                    newEntry.addProperty(m.group(1), m.group(2));
-                }
-                // Is is an end-of-entry marker?
-                else if( buffer.matches("\\}") )
-                {
-                    return newEntry;
-                }
-                else
-                {
-                    System.out.println("[WW]\tUnrecognised line in '" +key+ "' -> '" +buffer+ "'");
-                }
+                if( !fields.contains(prop.group(1)) )
+                    fields.add(prop.group(1));
+
+                String value = readUntilClosingBrace( inputStream );
+
+                entry.addProperty( prop.group(1), value );
+
+                // Pop from the start of the buffer...
+                buffer = buffer.substring( prop.group(0).length() );
             }
+            else if( closeEntry.matcher(buffer).find() )
+            {
+                Matcher eoe = closeEntry.matcher(buffer);
+                eoe.find();
 
-            buffer = inputStream.readLine();
+                // Pop from the start of the buffer...
+                buffer = buffer.substring( eoe.group(0).length() );
+
+                return entry;
+            }
+            
+            input = inputStream.read();
         }
 
-        System.out.println( "Unexpected EOF?!" );
-        return null;
+        System.err.println("Warning! Did not see the end of an entry! Attempting to continue...");
+        return entry;
+    }
+
+
+    private String readUntilClosingBrace( BufferedReader inputReader ) throws Throwable
+    {
+        int depth = 0;
+        boolean inQuote = false;
+        String output = "";
+        int input = inputReader.read();
+
+        while( input != -1 )
+        {
+            if( (char)input == '\\' )
+                output += "" + (char)input + (char)inputReader.read();
+
+            if( (char)input == '\"' )
+                inQuote = !inQuote;
+
+            if( (char)input == '{' )
+                depth++;
+
+            if( depth == 0 && !inQuote )
+            {
+                if( (char)input == ',' || (char)input == '}' )
+                        return output;
+                else if( (char)input != ' ' && (char)input != '\t' && (char)input != '\n' && (char)input != '\r' )
+                    output += (char)input;
+            }
+            else
+                output += (char)input;
+
+
+            if( (char)input == '}' )
+            {
+                depth--;
+
+                if( depth < 0 )
+                    throw new Exception("Extra closing brace! Are you missing something somewhere? (" +output+ ")");
+            }
+
+            input = inputReader.read();
+        }
+
+        throw new Exception("Mis-matched braces! Are you missing something somewhere? (" +output+ ")");
     }
 
 }

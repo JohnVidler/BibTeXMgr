@@ -6,7 +6,7 @@ import uk.co.johnvidler.bibtex.BibTeXEntry;
 import javax.swing.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.TreeMap;
+import java.util.TreeSet;
 
 public abstract class AbstractTaskPanel extends JPanel implements KeyListener
 {
@@ -21,7 +21,7 @@ public abstract class AbstractTaskPanel extends JPanel implements KeyListener
      * Sets the data source for the current window - may change at any time!
      * @param dataSource The new data source!
      */
-    public abstract void setDataSource( TreeMap<String, BibTeXEntry> dataSource );
+    public abstract void setDataSource( TreeSet<BibTeXEntry> dataSource );
 
     /**
      * Stub key typed event for panels to hook

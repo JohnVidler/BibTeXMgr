@@ -21,6 +21,8 @@ public class BibTeXMgr
 
         ListTaskPanel listTask = new ListTaskPanel();
 
+        listTask.setColumns( new String[]{"Type", "Key", "Title", "Author", "Pages", "Volume", "Note", "Year"} );
+
         win.setCurrentTaskPanel( listTask );
 
     }

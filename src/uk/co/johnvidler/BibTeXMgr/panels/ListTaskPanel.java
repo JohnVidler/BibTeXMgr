@@ -7,34 +7,37 @@ import javax.swing.table.AbstractTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.TreeMap;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.TreeSet;
 
 public class ListTaskPanel extends AbstractTaskPanel
 {
     private JTable table = null;
     private JScrollPane scrollArea = null;
-    private TreeMap<String, BibTeXEntry> dataSource = null;
+    private TreeSet<BibTeXEntry> dataSource = null;
 
     //private String[] columns = {"Key", "Title", "Author"};
-    private String[] columns = {"Type", "Key", "Title", "Author"};
+    //private String[] columns = {"Type", "Key", "Title", "Author", "Pages", "Volume", "Note"};
+    private ArrayList<String> columns = new ArrayList<String>();
 
     private AbstractTableModel dataModel = new AbstractTableModel()
     {
         public String getColumnName( int col )
         {
-            return columns[col];
+            return columns.get(col);
         }
 
         public int getRowCount()
         {
             if( dataSource == null )
                 return 0;
-            return dataSource.keySet().size();
+            return dataSource.size();
         }
 
         public int getColumnCount()
         {
-            return columns.length;
+            return columns.size();
         }
 
         public Object getValueAt( int row, int col )
@@ -42,18 +45,23 @@ public class ListTaskPanel extends AbstractTaskPanel
             if( dataSource == null )
                 return null;
 
-            String keys[] = dataSource.keySet().toArray(new String[0]);
+            Iterator<BibTeXEntry> iter = dataSource.iterator();
+            BibTeXEntry entry = iter.next();
+            for ( int i=0; i<row; i++ )
+                entry = iter.next();
 
-            if( columns[col].equalsIgnoreCase("key") )
-                return keys[row];
+            Object value = null;
+            if( columns.get(col).equalsIgnoreCase("key") )
+                value = entry.getKey();
+            else if( columns.get(col).equalsIgnoreCase("type") )
+                value = entry.getType();
             else
-            {
-                BibTeXEntry entry = dataSource.get( keys[row] );
+                value = entry.getProperty( columns.get(col) );
 
-                if( columns[col].equalsIgnoreCase("type") )
-                    return entry.getType();
-                return entry.getProperty( columns[col] );
-            }
+            if( value == null)
+                return "";
+
+            return value;
         }
 
         public boolean isCellEditable( int row, int col )
@@ -69,24 +77,17 @@ public class ListTaskPanel extends AbstractTaskPanel
             if( dataSource == null )
                 return;
 
-            String keys[] = dataSource.keySet().toArray(new String[0]);
-            BibTeXEntry entry = dataSource.get( keys[row] );
+            Iterator<BibTeXEntry> iter = dataSource.iterator();
+            BibTeXEntry entry = iter.next();
+            for ( int i=0; i<row; i++ )
+                entry = iter.next();
 
-
-            if( columns[col].equalsIgnoreCase("key") )
-            {
-                dataSource.remove(entry);
-                entry.setKey( (String)value );
-                dataSource.put( (String)value, entry );
-                repaint();
-                return;
-            }
-            else if( columns[col].equalsIgnoreCase("type") )
-            {
-                entry.setType( (String)value );
-                return;
-            }
-            entry.addProperty(columns[col], (String) value);
+            if( columns.get(col).equalsIgnoreCase("key") )
+                entry.setKey( value.toString() );
+            else if( columns.get(col).equalsIgnoreCase("type") )
+                entry.setType( value.toString() );
+            else
+                entry.addProperty( columns.get(col), value.toString() );
         }
 
     };
@@ -102,7 +103,7 @@ public class ListTaskPanel extends AbstractTaskPanel
                 return;
             }
 
-            dataSource.put("",new BibTeXEntry("",""));
+            dataSource.add( new BibTeXEntry("Article", "") );
             table.updateUI();
         }
     };
@@ -132,10 +133,19 @@ public class ListTaskPanel extends AbstractTaskPanel
     }
 
     @Override
-    public void setDataSource(TreeMap<String, BibTeXEntry> dataSource)
+    public void setDataSource( TreeSet<BibTeXEntry> dataSource )
     {
         this.dataSource = dataSource;
         table.setModel(dataModel);
+        dataModel.fireTableDataChanged();
+        repaint();
+    }
+
+    public void setColumns( String[] newCols )
+    {
+        columns.clear();
+        for( String col : newCols )
+            columns.add(col);
         dataModel.fireTableDataChanged();
         repaint();
     }

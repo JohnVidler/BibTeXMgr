@@ -2,7 +2,7 @@ package uk.co.johnvidler.bibtex;
 
 import java.util.*;
 
-public class BibTeXEntry implements Comparable<String>
+public class BibTeXEntry implements Comparable<BibTeXEntry>
 {
     private String type = "???";
     private String key = "???";
@@ -66,7 +66,7 @@ public class BibTeXEntry implements Comparable<String>
                 buffer += ",\n\t" +key+ " = \"" +property+ "\"";
         }
 
-        return buffer+"\n}\n";
+        return buffer+"\n},\n";
     }
 
     public String toXML()
@@ -84,5 +84,7 @@ public class BibTeXEntry implements Comparable<String>
         return buffer + "</" +type+ ">\n";
     }
 
-    public int compareTo(String s){ return key.compareTo(s); }
+    public int compareTo(BibTeXEntry s) {
+        return key.compareTo(s.getKey());
+    }
 }
