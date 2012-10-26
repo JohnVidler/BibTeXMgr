@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bibliography</string>
+
+
+    <!-- Menu strings -->
+    <string name="menu_newBibliography">New</string>
+    <string name="menu_saveBibliography">Save</string>
+    <string name="menu_saveAsBibliography">Save As</string>
+
+    <string name="menu_editEntry">Edit</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- Dialog strings -->
+    <string name="dialog_loading">One moment please... </string>
+
+</resources>

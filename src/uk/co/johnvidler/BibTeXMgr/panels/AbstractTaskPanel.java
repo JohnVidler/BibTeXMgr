@@ -1,7 +1,7 @@
 package uk.co.johnvidler.BibTeXMgr.panels;
 
 import uk.co.johnvidler.BibTeXMgr.ui.MainWindow;
-import uk.co.johnvidler.bibtex.BibTeXEntry;
+import uk.co.johnvidler.biblio.bibtex.BibTeXEntry;
 
 import javax.swing.*;
 import java.awt.event.KeyEvent;

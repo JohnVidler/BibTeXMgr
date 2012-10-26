@@ -1,6 +1,6 @@
 package uk.co.johnvidler.BibTeXMgr.panels;
 
-import uk.co.johnvidler.bibtex.BibTeXEntry;
+import uk.co.johnvidler.biblio.bibtex.BibTeXEntry;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -87,7 +87,7 @@ public class ListTaskPanel extends AbstractTaskPanel
             else if( columns.get(col).equalsIgnoreCase("type") )
                 entry.setType( value.toString() );
             else
-                entry.addProperty( columns.get(col), value.toString() );
+                entry.setProperty(columns.get(col), value.toString());
         }
 
     };

@@ -2,14 +2,15 @@ package uk.co.johnvidler.BibTeXMgr;
 
 import uk.co.johnvidler.BibTeXMgr.panels.ListTaskPanel;
 import uk.co.johnvidler.BibTeXMgr.ui.MainWindow;
+import uk.co.johnvidler.biblio.Entry;
+import uk.co.johnvidler.biblio.bibtex.BibTeXReader;
+import uk.co.johnvidler.biblio.bibtex.BibTeXWriter;
 
-/**
- * Created by IntelliJ IDEA.
- * User: john
- * Date: 30/03/11
- * Time: 16:55
- * To change this template use File | Settings | File Templates.
- */
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.PrintWriter;
+
 public class BibTeXMgr
 {
 
@@ -24,6 +25,30 @@ public class BibTeXMgr
         listTask.setColumns( new String[]{"Type", "Key", "Title", "Author", "Pages", "Volume", "Note", "Year"} );
 
         win.setCurrentTaskPanel( listTask );
+
+        try
+        {
+            //BibTeXReader reader = new BibTeXReader( new BufferedReader( new FileReader( new File("/home/john/example.bib") ) ) );
+            BibTeXReader reader = new BibTeXReader( new BufferedReader( new FileReader( new File("/home/john/small.bib") ) ) );
+            BibTeXWriter writer = new BibTeXWriter( new PrintWriter(System.out) );
+
+            int count = 0;
+            Entry entry = reader.read();
+            while ( entry != null )
+            {
+
+                writer.write( entry );
+
+                count++;
+                entry = reader.read();
+            }
+            System.out.println( "Total: " + count );
+            
+        }
+        catch( Throwable t )
+        {
+            t.printStackTrace();
+        }
 
     }
 

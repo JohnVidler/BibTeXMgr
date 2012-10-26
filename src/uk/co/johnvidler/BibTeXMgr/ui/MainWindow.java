@@ -1,18 +1,14 @@
 package uk.co.johnvidler.BibTeXMgr.ui;
 
 import uk.co.johnvidler.BibTeXMgr.panels.AbstractTaskPanel;
-import uk.co.johnvidler.BibTeXMgr.panels.ListTaskPanel;
-import uk.co.johnvidler.bibtex.BibTeXEntry;
-import uk.co.johnvidler.bibtex.BibTeXFile;
+import uk.co.johnvidler.biblio.bibtex.BibTeXEntry;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.File;
 import java.util.TreeSet;
 import java.util.concurrent.Semaphore;
 
@@ -33,11 +29,7 @@ public class MainWindow extends JFrame implements KeyListener
     {
         public void actionPerformed(ActionEvent actionEvent)
         {
-            dataSource = new TreeSet<BibTeXEntry>();
-            dataSource.add(new BibTeXEntry("Article", "new"));
-
-            if( currentTaskPanel != null )
-                currentTaskPanel.setDataSource( dataSource );
+            
         }
     };
 
@@ -46,46 +38,7 @@ public class MainWindow extends JFrame implements KeyListener
     {
         public void actionPerformed(ActionEvent actionEvent)
         {
-            BibTeXFile bibFile = new BibTeXFile();
-            try
-            {
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setMultiSelectionEnabled(false);
-                fileChooser.setFileFilter( new FileFilter() {
-                    @Override
-                    public boolean accept(File file) {
-                        return file.isDirectory() || file.getAbsolutePath().endsWith(".bib");
-                    }
 
-                    @Override
-                    public String getDescription() {
-                        return "BibTex files";
-                    }
-                } );
-
-                int action = fileChooser.showOpenDialog(self);
-                if( action == JFileChooser.APPROVE_OPTION )
-                {
-                    File file = fileChooser.getSelectedFile();
-                    dataSource = bibFile.read( file );
-
-                    if( currentTaskPanel != null )
-                        currentTaskPanel.setDataSource( dataSource );
-
-                    if( currentTaskPanel instanceof ListTaskPanel )
-                    {
-                        ListTaskPanel panel = (ListTaskPanel)currentTaskPanel;
-                    }
-                }
-            }
-            catch( Throwable t )
-            {
-                JDialog alert = new JDialog( self, "Error!", true );
-                alert.setTitle("Error!");
-                alert.add(new JLabel(t.getLocalizedMessage()));
-                alert.pack();
-                alert.setVisible(true);
-            }
         }
     };
 
@@ -97,40 +50,7 @@ public class MainWindow extends JFrame implements KeyListener
     {
         public void actionPerformed(ActionEvent actionEvent)
         {
-            BibTeXFile bibFile = new BibTeXFile();
-            try
-            {
-                JFileChooser fileChooser = new JFileChooser();
-                fileChooser.setMultiSelectionEnabled(false);
-                fileChooser.setFileFilter( new FileFilter() {
-                    @Override
-                    public boolean accept(File file) {
-                        return file.isDirectory() || file.getAbsolutePath().endsWith(".bib");
-                    }
-
-                    @Override
-                    public String getDescription() {
-                        return "BibTex files";
-                    }
-                } );
-
-                int action = fileChooser.showSaveDialog( self );
-                if( action == JFileChooser.APPROVE_OPTION )
-                {
-                    File file = fileChooser.getSelectedFile();
-
-                    bibFile.write( file, dataSource );
-
-                }
-
-            }
-            catch( Throwable t )
-            {
-                JDialog alert = new JDialog( self, "Error!", true );
-                alert.add( new JLabel( t.getLocalizedMessage() ) );
-                alert.pack();
-                alert.setVisible(true);
-            }
+            
         }
     };
 
